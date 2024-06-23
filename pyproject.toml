@@ -1,0 +1,37 @@
+[project]
+name = "shimeri"
+version = "0.1.0"
+description = "A Python package for calculating psychrometric properties of moist air and plotting psychrometric charts."
+authors = [
+    { name = "Shoji, Yutaka", email = "ytk.shoji@gmail.com" }
+]
+dependencies = [
+    "plotly>=5.22.0",
+    "numpy>=2.0.0",
+    "scipy>=1.14.0",
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[project.urls]
+Homepage = "https://github.com/yutaka-shoji/shimeri"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "ruff>=0.5.2",
+    "pyright>=1.1.371",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shimeri"]
+
+[tool.ruff]
+line-length = 88
