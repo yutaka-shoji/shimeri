@@ -1,14 +1,14 @@
 [project]
 name = "shimeri"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python package for calculating psychrometric properties of moist air and plotting psychrometric charts."
 authors = [
     { name = "Shoji, Yutaka", email = "ytk.shoji@gmail.com" }
 ]
 dependencies = [
-    "plotly>=5.22.0",
-    "numpy>=2.0.0",
-    "scipy>=1.14.0",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "plotly>=5.10",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

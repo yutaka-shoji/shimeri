@@ -16,7 +16,7 @@ packaging==24.1
     # via plotly
 plotly==5.22.0
     # via shimeri
-scipy==1.14.0
+scipy==1.13.1
     # via shimeri
-tenacity==8.4.1
+tenacity==8.5.0
     # via plotly
