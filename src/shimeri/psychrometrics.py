@@ -57,8 +57,7 @@ class PsychrometricCalculator:
             en: Specific air enthalpy in kJ/kg.
 
         Returns:
-            A tuple of five numpy arrays or float, each representing one of the psychrometric variables. The arrays have the same
-            shape as the broadcasted input arrays.
+            A tuple of five numpy arrays or float, each representing one of the psychrometric variables. The arrays have the same shape as the broadcasted input arrays.
 
         Raises:
             ValueError: If the number of provided variables is not exactly two.
@@ -197,11 +196,13 @@ class PsychrometricCalculator:
     def get_en_from_db_hr(db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate specific air enthalpy from dry bulb temperature and humidity ratio.
+
         Args:
-            db: Dry bulb temperature (degC). Can be a scalar or a numpy array.
-            hr: Humidity ratio (g/kg). Can be a scalar or a numpy array.
+            db: Dry bulb temperature (degC).
+            hr: Humidity ratio (g/kg).
+
         Returns:
-            Specific air enthalpy (kJ/kg) as a numpy array.
+            Specific air enthalpy (kJ/kg).
         """
         # Broadcast the input arrays to the same shape
         db, hr = np.broadcast_arrays(db, hr)
@@ -212,11 +213,13 @@ class PsychrometricCalculator:
     def get_hr_from_db_en(db: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate humidity ratio from dry bulb temperature and specific air enthalpy.
+
         Args:
-            db: Dry bulb temperature (degC). Can be a scalar or a numpy array.
-            en: Specific air enthalpy (kJ/kg). Can be a scalar or a numpy array.
+            db: Dry bulb temperature (degC).
+            en: Specific air enthalpy (kJ/kg).
+
         Returns:
-            Humidity ratio (g/kg) as a numpy array.
+            Humidity ratio (g/kg).
         """
         # Broadcast the input arrays to the same shape
         db, en = np.broadcast_arrays(db, en)
@@ -226,11 +229,13 @@ class PsychrometricCalculator:
     def get_hr_from_db_rh(self, db: ArrayLike, rh: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate humidity ratio from dry bulb temperature and relative humidity.
+
         Args:
-            db: Dry bulb temperature (degC). Can be a scalar or a numpy array.
-            rh: Relative humidity (%). Can be a scalar or a numpy array.
+            db: Dry bulb temperature (degC).
+            rh: Relative humidity (%).
+
         Returns:
-            Humidity ratio (g/kg) as a numpy array.
+            Humidity ratio (g/kg).
         """
         # Broadcast the input arrays to the same shape
         db, rh = np.broadcast_arrays(db, rh)
@@ -244,11 +249,13 @@ class PsychrometricCalculator:
     def get_rh_from_db_hr(self, db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate relative humidity from dry bulb temperature and humidity ratio.
+
         Args:
-            db: Dry bulb temperature (degC). Can be a scalar or a numpy array.
-            hr: Humidity ratio (g/kg). Can be a scalar or a numpy array.
+            db: Dry bulb temperature (degC).
+            hr: Humidity ratio (g/kg).
+
         Returns:
-            Relative humidity (%) as a numpy array.
+            Relative humidity (%).
         """
         # Broadcast the input arrays to the same shape
         db, hr = np.broadcast_arrays(db, hr)
@@ -268,11 +275,13 @@ class PsychrometricCalculator:
     def get_db_from_hr_en(hr: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate dry bulb temperature from humidity ratio and specific air enthalpy.
+
         Args:
-            hr: Humidity ratio (g/kg). Can be a scalar or a numpy array.
-            en: Specific air enthalpy (kJ/kg). Can be a scalar or a numpy array.
+            hr: Humidity ratio (g/kg).
+            en: Specific air enthalpy (kJ/kg).
+
         Returns:
-            Dry bulb temperature (degC) as a numpy array.
+            Dry bulb temperature (degC).
         """
         # Broadcast the input arrays to the same shape
         hr, en = np.broadcast_arrays(hr, en)
@@ -287,13 +296,13 @@ class PsychrometricCalculator:
 
 def get_saturation_pressure(temp: ArrayLike) -> NDArray[np.float64]:
     """
-    Calculate saturation pressure (Hyland and Wexler, 1983) in a vectorized manner.
+    Calculate saturation pressure (Hyland and Wexler, 1983).
 
     Args:
-        temp: Temperature (degC). Can be a scalar or a numpy array.
+        temp: Temperature (degC).
 
     Returns:
-        Saturation pressure (kPa) as a numpy array.
+        Saturation pressure (kPa)
     """
     temp_in_kelvine = np.asarray(temp) + 273.15
     result = np.empty_like(temp_in_kelvine)

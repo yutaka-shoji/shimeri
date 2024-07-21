@@ -16,7 +16,7 @@ class PsychrometricChart(go.Figure):
         Initialize the PsychrometricChart class.
 
         Args:
-            pressure: Atmospheric pressure in kPa. Default is 101.325 kPa.
+            pressure: Atmospheric pressure in kPa.
         """
         super().__init__()
 
@@ -125,7 +125,6 @@ class PsychrometricChart(go.Figure):
         Args:
             rh: Relative humidity (%) as a float.
             db_range: Range of dry bulb temperatures (degC) for which to draw the line.
-                      Default is [-10, 70].
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         dbs = np.linspace(db_range[0], db_range[-1], 100)
@@ -148,7 +147,6 @@ class PsychrometricChart(go.Figure):
         Args:
             db: Dry bulb temperature (degC) as a float.
             rh_range: Range of relative humidities (%) for which to draw the line.
-                       Default is [0, 100].
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         rhs = np.linspace(rh_range[0], rh_range[-1], 100)
@@ -171,7 +169,6 @@ class PsychrometricChart(go.Figure):
         Args:
             hr: Humidity ratio (g/kg) as a float.
             db_range: Range of dry bulb temperatures (degC) for which to draw the line.
-            Default is [-10, 70].
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         dbs = np.array(db_range)
@@ -194,7 +191,6 @@ class PsychrometricChart(go.Figure):
         Args:
             en: Specific enthalpy (kJ/kg) as a float.
             db_range: Range of dry bulb temperatures (degC) for which to draw the line.
-                      Default is [-10, 70].
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         dbs = np.array(db_range)

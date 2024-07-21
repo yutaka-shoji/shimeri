@@ -1,0 +1,43 @@
+site_name: "shimeri"
+site_url: "https://yutaka-shoji.shimeri.github.io/"
+
+theme:
+  name: "material"
+  features:
+    - content.code.copy
+
+repo_name: yutaka-shoji/shimeri
+repo_url: https://github.com/yutaka-shoji/shimeri
+copyright: Copyright &copy; 2024 Shoji, Yutaka
+
+nav:
+- Home:
+  - Overview: index.md
+  - License: license.md
+- API reference:
+    psychrometrics: api/psychrometrics.md
+    psychrometricchart: api/psychrometricchart.md
+
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [.]
+        options:
+          members_order: alphabetical
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
