@@ -29,6 +29,11 @@ griffe==0.48.0
     # via mkdocstrings-python
 idna==3.7
     # via requests
+importlib-metadata==8.2.0
+    # via markdown
+    # via mkdocs
+    # via mkdocs-get-deps
+    # via mkdocstrings
 jinja2==3.1.4
     # via mkdocs
     # via mkdocs-material
@@ -105,7 +110,11 @@ six==1.16.0
     # via python-dateutil
 tenacity==8.5.0
     # via plotly
+typing-extensions==4.12.2
+    # via mkdocstrings
 urllib3==2.2.2
     # via requests
 watchdog==4.0.1
     # via mkdocs
+zipp==3.19.2
+    # via importlib-metadata

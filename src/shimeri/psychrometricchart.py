@@ -1,6 +1,9 @@
+from typing import Union
+
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 import plotly.graph_objects as go
+from numpy.typing import ArrayLike, NDArray
+
 from shimeri.psychrometrics import PsychrometricCalculator
 
 
@@ -79,7 +82,10 @@ class PsychrometricChart(go.Figure):
         )
 
     def add_points(
-        self, en: NDArray[np.float64] | float, hr: NDArray[np.float64] | float, **kwargs
+        self,
+        en: Union[NDArray[np.float64], float],
+        hr: Union[NDArray[np.float64], float],
+        **kwargs,
     ):
         """
         Add points to the psychrometric chart.
@@ -116,7 +122,7 @@ class PsychrometricChart(go.Figure):
     def draw_iso_rh_line(
         self,
         rh: float,
-        db_range: list[float] | NDArray[np.float64] = [-10, 70],
+        db_range: Union[list[float], NDArray[np.float64]] = [-10, 70],
         **kwargs,
     ):
         """
@@ -138,7 +144,7 @@ class PsychrometricChart(go.Figure):
     def draw_iso_db_line(
         self,
         db: float,
-        rh_range: list[float] | NDArray[np.float64] = [0, 100],
+        rh_range: Union[list[float], NDArray[np.float64]] = [0, 100],
         **kwargs,
     ):
         """
@@ -160,7 +166,7 @@ class PsychrometricChart(go.Figure):
     def draw_iso_hr_line(
         self,
         hr: float,
-        db_range: list[float] | NDArray[np.float64] = [-10, 70],
+        db_range: Union[list[float], NDArray[np.float64]] = [-10, 70],
         **kwargs,
     ):
         """
@@ -182,7 +188,7 @@ class PsychrometricChart(go.Figure):
     def draw_iso_en_line(
         self,
         en: float,
-        db_range: list[float] | NDArray[np.float64] = [-10, 70],
+        db_range: Union[list[float], NDArray[np.float64]] = [-10, 70],
         **kwargs,
     ):
         """

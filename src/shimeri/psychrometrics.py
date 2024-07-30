@@ -1,10 +1,9 @@
 import warnings
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
-from numpy.typing import NDArray, ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import root
-
 
 # CONSTANTS
 MOL_WEIGHT_WATER = 18.0153  # g/mol
@@ -36,11 +35,11 @@ class PsychrometricCalculator:
         hr: ArrayLike = np.nan,
         en: ArrayLike = np.nan,
     ) -> tuple[
-        NDArray[np.float64] | float,
-        NDArray[np.float64] | float,
-        NDArray[np.float64] | float,
-        NDArray[np.float64] | float,
-        NDArray[np.float64] | float,
+        Union[NDArray[np.float64], float],
+        Union[NDArray[np.float64], float],
+        Union[NDArray[np.float64], float],
+        Union[NDArray[np.float64], float],
+        Union[NDArray[np.float64], float],
     ]:
         """
         Calculate all psychrometric variables given any two of them.
@@ -244,7 +243,7 @@ class PsychrometricCalculator:
         # Calculate partial pressure of water vapor
         pw = rh * ps / 100
         # Calculate humidity ratio
-        return (MOL_WEIGHT_WATER / MOL_WEIGHT_AIR) * pw / (self.pressure - pw) * 1e3
+        return self.get_hr_from_pw(pw)
 
     def get_rh_from_db_hr(self, db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
         """
@@ -288,10 +287,45 @@ class PsychrometricCalculator:
         # Calculate dry bulb temperature
         return (en - 2501 * hr * 1e-3) / (1.006 + 1.86 * hr * 1e-3)
 
+    def get_hr_from_db_wb(self, db: ArrayLike, wb: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate humidity ratio from dry bulb temperature and wet bulb temperature.
+
+        Args:
+            db: Dry bulb temperature (degC).
+            wb: Wet bulb temperature (degC).
+
+        Returns:
+            Humidity ratio (g/kg).
+        """
+        # Broadcast the input arrays to the same shape
+        db, wb = np.broadcast_arrays(db, wb)
+        # Calculate saturation pressure at wet bulb temperature
+        ps_wb = get_saturation_pressure(wb)
+        # Calculate psychrometer constant
+        c = self._psychrometer_constant(wb)
+        # Calculate partial pressure of water vapor
+        pw = ps_wb - c * self.pressure * (db - wb)
+        # Calculate humidity ratio
+        return self.get_hr_from_pw(pw)
+
+    def get_hr_from_pw(self, pw: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate humidity ratio from partial pressure of water vapor.
+
+        Args:
+            pw: Partial pressure of water vapor (kPa).
+
+        Returns:
+            Humidity ratio (g/kg).
+        """
+        pw = np.asarray(pw)
+        return (MOL_WEIGHT_WATER / MOL_WEIGHT_AIR) * pw / (self.pressure - pw) * 1e3
+
     @staticmethod
-    def _psychrometer_constant(wb: float) -> float:
+    def _psychrometer_constant(wb: ArrayLike) -> NDArray[np.float64]:
         """Calculate the psychrometer constant."""
-        return 0.000662 if wb >= 0.01 else 0.000583
+        return np.where(np.asarray(wb) >= 0.01, 0.000662, 0.000583)
 
 
 def get_saturation_pressure(temp: ArrayLike) -> NDArray[np.float64]:
