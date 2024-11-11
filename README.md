@@ -1,4 +1,7 @@
+
+
 # shimeri
+![PyPI Downloads](https://static.pepy.tech/badge/shimeri)
 
 A Python package for calculating psychrometric properties of moist air and plotting psychrometric charts based on plotly.
 
