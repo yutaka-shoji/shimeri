@@ -3,7 +3,6 @@ from typing import Callable, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from scipy.optimize import root
 
 # CONSTANTS
 MOL_WEIGHT_WATER = 18.0153  # g/mol
@@ -138,13 +137,21 @@ class PsychrometricCalculator:
         # system of equations
         f = self._make_eqs_function(input_idxs, input_vals)
         # initial guess
-        x_0 = np.array([3.0, 2.0, 2.0, 25.0, 20.0, 50.0, 10.0, 50.0])
-        sol = root(f, x_0)
+        x = np.array([3.0, 2.0, 2.0, 25.0, 20.0, 50.0, 10.0, 50.0])
+        tol = 1e-6
+        max_iter = 100
 
-        if not sol.success:
-            raise ConvergenceError(f"Convergence failed: {sol.message}")
+        for _ in range(max_iter):
+            fx = f(x)
+            if np.linalg.norm(fx) < tol:
+                break
+            J = self._jacobian(f, x)
+            delta_x = np.linalg.solve(J, -fx)
+            x += delta_x
+        else:
+            raise ConvergenceError("Convergence failed")
 
-        result = np.round(sol.x[3:], 2)
+        result = np.round(x[3:], 2)
         db = result[0]
         wb = result[1]
         rh = result[2]
@@ -158,6 +165,19 @@ class PsychrometricCalculator:
             raise ValueError(f"HR={hr:.1f}<0g.kg-1")
 
         return db, wb, rh, hr, en
+
+    def _jacobian(self, f: Callable, x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
+        """
+        Calculate the Jacobian matrix of the function f at x using finite differences.
+        """
+        n = x.size
+        J = np.zeros((n, n))
+        fx = f(x)
+        for i in range(n):
+            x_eps = np.copy(x)
+            x_eps[i] += eps
+            J[:, i] = (f(x_eps) - fx) / eps
+        return J
 
     def _make_eqs_function(
         self, input_idxs: NDArray[np.int32], input_vals: NDArray[np.float64]
