@@ -244,6 +244,45 @@ class PsychrometricChart(go.Figure):
             )
         )
 
+    def add_histogram_2d_contour(
+        self,
+        en: Union[NDArray[np.float64], float],
+        hr: Union[NDArray[np.float64], float],
+        **kwargs,
+    ):
+        """
+        Add a 2D histogram contour to the psychrometric chart.
+
+        Args:
+            en: Moist air enthalpy (kJ/kg).
+            hr: Humidity Ratio (g/kg).
+            **kwargs: Additional keyword arguments to be passed to plotly's go.Histogram2dContour.
+        """
+        x, y = self._skew_transform(np.atleast_1d(en), np.atleast_1d(hr))
+
+        self.add_trace(
+            go.Histogram2dContour(
+                x=x,
+                y=y,
+                **kwargs,
+            )
+        )
+        # add text annotation to the contour peak point
+        if "name" in kwargs:
+            name = kwargs["name"]
+            x_gravity, y_gravity = np.mean(x), np.mean(y)
+            self.add_trace(
+                go.Scatter(
+                    x=[x_gravity],
+                    y=[y_gravity],
+                    mode="text",
+                    text=[name],
+                    textfont=dict(size=8),
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+
     def _add_annotation_from_xy(self, x: NDArray, y: NDArray, text: NDArray):
         """Add annotations to the figure."""
         self.add_trace(

@@ -17,6 +17,8 @@ Usage example below.
 ``` py title="sample.py"
 import shimeri as sh
 import numpy as np
+import plotly.graph_objects as go
+import pandas as pd
 
 if __name__ == "__main__":
     # instantiate psychrometric calculator
@@ -43,6 +45,38 @@ if __name__ == "__main__":
         mode="markers",
     )
 
+    # density plot
+    df = pd.read_csv("db_rh_tokyo_2023.csv", parse_dates=True, index_col=0)
+    dbs = df.loc["2023-07":"2023-08", "db"].to_numpy()
+    rhs = df.loc["2023-07":"2023-08", "rh"].to_numpy()
+    # hrs = pc.get_hr_from_db_rh(dbs, rhs)
+    # ens = pc.get_en_from_db_hr(dbs, hrs)
+    dbs, wbs, rhs, hrs, ens = pc.get_all(db=dbs, rh=rhs)
+    fig.add_trace(
+        go.Histogram2dContour(
+            x=dbs,
+            y=hrs,
+            name="tokyo summer 2023",
+            colorscale=[[0, "rgba(255,255,255,0)"], [1, "rgba(255,0,0,255)"]],
+            contours_showlines=False,
+            showscale=False,
+        )
+    )
+    dbs = df.loc["2023-01":"2023-02", "db"].to_numpy()
+    rhs = df.loc["2023-01":"2023-02", "rh"].to_numpy()
+    hrs = pc.get_hr_from_db_rh(dbs, rhs)
+    ens = pc.get_en_from_db_hr(dbs, hrs)
+    fig.add_trace(
+        go.Histogram2dContour(
+            x=dbs,
+            y=hrs,
+            name="tokyo winter 2023",
+            colorscale=[[0, "rgba(255,255,255,0)"], [1, "rgba(0,0,255,255)"]],
+            contours_showlines=False,
+            showscale=False,
+        )
+    )
+
     # add a line from points
     dbs = np.array([26.0, 35.0])
     rhs = np.array([50.0, 60.0])
@@ -51,7 +85,7 @@ if __name__ == "__main__":
     fig.add_points(
         en=ens,
         hr=hrs,
-        name="line",
+        name="a line",
         mode="lines",
     )
 
@@ -78,7 +112,7 @@ if __name__ == "__main__":
 ```
 
 Sample Result:  
-![Sample Result](https://github.com/yutaka-shoji/shimeri/blob/main/sample.png?raw=true)
+![Sample Result](https://github.com/yutaka-shoji/shimeri/blob/main/example/example.png?raw=true)
 
 ## Attention
 The `PsychrometricCalculator.get_all()` method uses convergence calculations. Especially when calculating from wet-bulb temperature and enthalpy, convergence can be poor, potentially leading to inaccurate results. (The poor convergence can be understood from the fact that the slopes of wet-bulb temperature and enthalpy lines are similar on the psychrometric chart.
