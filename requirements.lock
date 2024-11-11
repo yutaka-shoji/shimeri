@@ -7,16 +7,14 @@
 #   all-features: false
 #   with-sources: false
 #   generate-hashes: false
+#   universal: false
 
 -e file:.
 numpy==2.0.0
-    # via scipy
     # via shimeri
 packaging==24.1
     # via plotly
 plotly==5.22.0
-    # via shimeri
-scipy==1.13.1
     # via shimeri
 tenacity==8.5.0
     # via plotly
