@@ -8,6 +8,7 @@ wheels/
 
 # venv
 .venv
+*.lock
 
 # pyright static type checking
 typings/
