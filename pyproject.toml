@@ -19,9 +19,8 @@ Homepage = "https://github.com/yutaka-shoji/shimeri"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.rye]
-managed = true
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.5.2",
     "pyright>=1.1.371",
     "mkdocstrings[python]>=0.25.1",
@@ -37,3 +36,7 @@ packages = ["src/shimeri"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
