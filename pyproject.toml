@@ -1,6 +1,6 @@
 [project]
 name = "shimeri"
-version = "0.1.3"
+version = "0.2.0"
 description = "A Python package for calculating psychrometric properties of moist air and plotting psychrometric charts."
 authors = [
     { name = "Shoji, Yutaka", email = "ytk.shoji@gmail.com" }
