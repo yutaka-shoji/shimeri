@@ -25,6 +25,3 @@ Example Result:
 
 *shimeri on web* is available at [shimeri-web.vercel.app](https://shimeri-web.vercel.app/).
 
-## Attention
-The `PsychrometricCalculator.get_all()` method uses convergence calculations. Especially when calculating from wet-bulb temperature and enthalpy, convergence can be poor, potentially leading to inaccurate results. (The poor convergence can be understood from the fact that the slopes of wet-bulb temperature and enthalpy lines are similar on the psychrometric chart.
-

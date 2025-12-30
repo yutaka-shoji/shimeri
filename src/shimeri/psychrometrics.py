@@ -1,22 +1,12 @@
-import warnings
-from typing import Callable, Union
+from typing import Union
 
 import numpy as np
+from CoolProp.HumidAirProp import HAPropsSI
 from numpy.typing import ArrayLike, NDArray
-
-# CONSTANTS
-MOL_WEIGHT_WATER = 18.0153  # g/mol
-MOL_WEIGHT_AIR = 28.9645  # g/mol
-
-
-class ConvergenceError(Exception):
-    """Raised when the system of equations cannot be solved."""
-
-    pass
 
 
 class PsychrometricCalculator:
-    """Class to calculate psychrometric variables."""
+    """Class to calculate psychrometric variables using CoolProp."""
 
     def __init__(self, pressure: float = 101.325):
         """Initialize the Psychrometrics class.
@@ -25,6 +15,7 @@ class PsychrometricCalculator:
             pressure: Atmospheric pressure (kPa)
         """
         self.pressure = pressure
+        self._pressure_pa = pressure * 1000  # Convert to Pa for CoolProp
 
     def get_all(
         self,
@@ -59,7 +50,6 @@ class PsychrometricCalculator:
 
         Raises:
             ValueError: If the number of provided variables is not exactly two.
-            ConvergenceError: If the calculation does not converge for a particular set of inputs.
         """
         # Check args number (2 vars of 5)
         provided_args_number = sum(
@@ -69,150 +59,110 @@ class PsychrometricCalculator:
             raise ValueError("Input 2 Variables of 5.")
 
         db, wb, rh, hr, en = np.broadcast_arrays(db, wb, rh, hr, en)
-        db = db.flatten()
-        wb = wb.flatten()
-        rh = rh.flatten()
-        hr = hr.flatten()
-        en = en.flatten()
+        original_shape = db.shape
+        db = db.flatten().astype(float)
+        wb = wb.flatten().astype(float)
+        rh = rh.flatten().astype(float)
+        hr = hr.flatten().astype(float)
+        en = en.flatten().astype(float)
 
-        for idx in range(db.size):
-            try:
-                db[idx], wb[idx], rh[idx], hr[idx], en[idx] = self._calc_single(
-                    db[idx], wb[idx], rh[idx], hr[idx], en[idx]
-                )
-            except (ValueError, ConvergenceError) as e:
-                warnings.warn(
-                    "Calculation failed for input at "
-                    + "(db,wb,rh,hr,en)="
-                    + f"({db[idx]:.1f},{wb[idx]:.1f},{rh[idx]:.1f},{hr[idx]:.1f},{en[idx]:.1f}): "
-                    + f"{str(e)}"
-                )
-                db[idx] = np.nan
-                wb[idx] = np.nan
-                rh[idx] = np.nan
-                hr[idx] = np.nan
-                en[idx] = np.nan
+        # Build input parameters for HAPropsSI
+        inputs = []
 
-        if db.size == 1:
-            return db[0], wb[0], rh[0], hr[0], en[0]
-        return db, wb, rh, hr, en
+        if np.isfinite(db).any():
+            inputs.append(("T", db + 273.15))  # degC to K
+        if np.isfinite(wb).any():
+            inputs.append(("B", wb + 273.15))  # degC to K (wet bulb)
+        if np.isfinite(rh).any():
+            inputs.append(("R", rh / 100))  # % to fraction
+        if np.isfinite(hr).any():
+            inputs.append(("W", hr / 1000))  # g/kg to kg/kg
+        if np.isfinite(en).any():
+            inputs.append(("H", en * 1000))  # kJ/kg to J/kg
 
-    def _calc_single(
-        self,
-        db: float,
-        wb: float,
-        rh: float,
-        hr: float,
-        en: float,
-        ps: float = np.nan,
-        ps_wb: float = np.nan,
-        pw: float = np.nan,
-    ) -> tuple[float, float, float, float, float]:
-        """
-        Calculate psychrometric variables for a single set of inputs.
+        input1_name, input1_val = inputs[0]
+        input2_name, input2_val = inputs[1]
 
-        Args:
-            db: Dry bulb temperature (degC).
-            wb: Wet bulb temperature (degC).
-            rh: Relative humidity (%).
-            hr: Humidity ratio (g/kg).
-            en: Specific air enthalpy (kJ/kg).
-            ps: Saturation pressure at dry bulb temperature (kPa).
-            ps_wb: Saturation pressure at wet bulb temperature (kPa).
-            pw: Partial pressure of water vapor (kPa).
+        # Calculate all outputs using HAPropsSI
+        db_out = (
+            HAPropsSI(
+                "T",
+                input1_name,
+                input1_val,
+                input2_name,
+                input2_val,
+                "P",
+                self._pressure_pa,
+            )
+            - 273.15
+        )  # K to degC
+        wb_out = (
+            HAPropsSI(
+                "B",
+                input1_name,
+                input1_val,
+                input2_name,
+                input2_val,
+                "P",
+                self._pressure_pa,
+            )
+            - 273.15
+        )  # K to degC
+        rh_out = (
+            HAPropsSI(
+                "R",
+                input1_name,
+                input1_val,
+                input2_name,
+                input2_val,
+                "P",
+                self._pressure_pa,
+            )
+            * 100
+        )  # fraction to %
+        hr_out = (
+            HAPropsSI(
+                "W",
+                input1_name,
+                input1_val,
+                input2_name,
+                input2_val,
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
+        en_out = (
+            HAPropsSI(
+                "H",
+                input1_name,
+                input1_val,
+                input2_name,
+                input2_val,
+                "P",
+                self._pressure_pa,
+            )
+            / 1000
+        )  # J/kg to kJ/kg
 
-        Returns:
-            A tuple of calculated psychrometric variables: dry bulb temperature, wet bulb temperature,
-            relative humidity, humidity ratio, and specific air enthalpy.
+        # Ensure outputs are numpy arrays
+        db_out = np.atleast_1d(db_out)
+        wb_out = np.atleast_1d(wb_out)
+        rh_out = np.atleast_1d(rh_out)
+        hr_out = np.atleast_1d(hr_out)
+        en_out = np.atleast_1d(en_out)
 
-        Raises:
-            ConvergenceError: If the root finding algorithm fails to converge.
-            ValueError: If the calculated relative humidity is greater than 100% or the calculated
-            humidity ratio is less than 0 g/kg.
-        """
-        input_arr = np.array([ps, ps_wb, pw, db, wb, rh, hr, en])
-        input_idxs = np.where(np.isfinite(input_arr))[0]
-        input_vals = input_arr[input_idxs]
+        if db_out.size == 1:
+            return db_out[0], wb_out[0], rh_out[0], hr_out[0], en_out[0]
+        return (
+            db_out.reshape(original_shape),
+            wb_out.reshape(original_shape),
+            rh_out.reshape(original_shape),
+            hr_out.reshape(original_shape),
+            en_out.reshape(original_shape),
+        )
 
-        # system of equations
-        f = self._make_eqs_function(input_idxs, input_vals)
-        # initial guess
-        x = np.array([3.0, 2.0, 2.0, 25.0, 20.0, 50.0, 10.0, 50.0])
-        tol = 1e-6
-        max_iter = 100
-
-        for _ in range(max_iter):
-            fx = f(x)
-            if np.linalg.norm(fx) < tol:
-                break
-            J = self._jacobian(f, x)
-            delta_x = np.linalg.solve(J, -fx)
-            x += delta_x
-        else:
-            raise ConvergenceError("Convergence failed")
-
-        result = np.round(x[3:], 2)
-        db = result[0]
-        wb = result[1]
-        rh = result[2]
-        hr = result[3]
-        en = result[4]
-
-        if rh > 100:
-            raise ValueError(f"RH={rh:.1f}>100%")
-
-        if hr < 0:
-            raise ValueError(f"HR={hr:.1f}<0g.kg-1")
-
-        return db, wb, rh, hr, en
-
-    def _jacobian(self, f: Callable, x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
-        """
-        Calculate the Jacobian matrix of the function f at x using finite differences.
-        """
-        n = x.size
-        J = np.zeros((n, n))
-        fx = f(x)
-        for i in range(n):
-            x_eps = np.copy(x)
-            x_eps[i] += eps
-            J[:, i] = (f(x_eps) - fx) / eps
-        return J
-
-    def _make_eqs_function(
-        self, input_idxs: NDArray[np.int32], input_vals: NDArray[np.float64]
-    ) -> Callable:
-        def equation(x: NDArray[np.float64]):
-            ps = x[0]
-            ps_wb = x[1]
-            pw = x[2]
-            db = x[3]
-            wb = x[4]
-            rh = x[5]
-            hr = x[6]
-            en = x[7]
-
-            c = self._psychrometer_constant(wb)  # psychrometer constant
-
-            eqs = np.zeros(8)
-
-            eqs[0] = ps - get_saturation_pressure(db)  # saturation pressure eq
-            eqs[1] = ps_wb - get_saturation_pressure(wb)  # wb saturation pressure eq
-            eqs[2] = pw - ps_wb + c * self.pressure * (db - wb)  # Sprung eq
-            eqs[3] = rh - (100 * pw) / ps  # relative humidity eq
-            eqs[4] = hr * 1e-3 - ((MOL_WEIGHT_WATER / MOL_WEIGHT_AIR) * pw) / (
-                self.pressure - pw
-            )  # humidity ratio eq
-            eqs[5] = en - 1.006 * db - (1.86 * db + 2501) * hr * 1e-3  # enthalpy eq
-            eqs[6] = x[input_idxs[0]] - input_vals[0]  # input equal
-            eqs[7] = x[input_idxs[1]] - input_vals[1]  # input equal
-
-            return eqs
-
-        return equation
-
-    @staticmethod
-    def get_en_from_db_hr(db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
+    def get_en_from_db_hr(self, db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate specific air enthalpy from dry bulb temperature and humidity ratio.
 
@@ -223,13 +173,53 @@ class PsychrometricCalculator:
         Returns:
             Specific air enthalpy (kJ/kg).
         """
-        # Broadcast the input arrays to the same shape
         db, hr = np.broadcast_arrays(db, hr)
-        # Calculate specific air enthalpy for each pair of db and hr
-        return 1.006 * db + (1.86 * db + 2501) * hr * 1e-3
+        original_shape = db.shape
 
-    @staticmethod
-    def get_hr_from_db_en(db: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
+        result = (
+            HAPropsSI(
+                "H",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "W",
+                np.asarray(hr).flatten() / 1000,
+                "P",
+                self._pressure_pa,
+            )
+            / 1000
+        )  # J/kg to kJ/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
+
+    def get_en_from_db_rh(self, db: ArrayLike, rh: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate specific air enthalpy from dry bulb temperature and relative humidity.
+
+        Args:
+            db: Dry bulb temperature (degC).
+            rh: Relative humidity (%).
+        Returns:
+            Specific air enthalpy (kJ/kg).
+        """
+        db, rh = np.broadcast_arrays(db, rh)
+        original_shape = db.shape
+
+        result = (
+            HAPropsSI(
+                "H",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "R",
+                np.asarray(rh).flatten() / 100,
+                "P",
+                self._pressure_pa,
+            )
+            / 1000
+        )  # J/kg to kJ/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
+
+    def get_hr_from_db_en(self, db: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate humidity ratio from dry bulb temperature and specific air enthalpy.
 
@@ -240,10 +230,23 @@ class PsychrometricCalculator:
         Returns:
             Humidity ratio (g/kg).
         """
-        # Broadcast the input arrays to the same shape
         db, en = np.broadcast_arrays(db, en)
-        # Calculate humidity ratio for each pair of db and en
-        return (en - 1.006 * db) / (1.86 * db + 2501) * 1e3
+        original_shape = db.shape
+
+        result = (
+            HAPropsSI(
+                "W",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "H",
+                np.asarray(en).flatten() * 1000,
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
 
     def get_hr_from_db_rh(self, db: ArrayLike, rh: ArrayLike) -> NDArray[np.float64]:
         """
@@ -256,14 +259,23 @@ class PsychrometricCalculator:
         Returns:
             Humidity ratio (g/kg).
         """
-        # Broadcast the input arrays to the same shape
         db, rh = np.broadcast_arrays(db, rh)
-        # Calculate saturation pressure
-        ps = get_saturation_pressure(db)
-        # Calculate partial pressure of water vapor
-        pw = rh * ps / 100
-        # Calculate humidity ratio
-        return self.get_hr_from_pw(pw)
+        original_shape = db.shape
+
+        result = (
+            HAPropsSI(
+                "W",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "R",
+                np.asarray(rh).flatten() / 100,
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
 
     def get_rh_from_db_hr(self, db: ArrayLike, hr: ArrayLike) -> NDArray[np.float64]:
         """
@@ -276,22 +288,25 @@ class PsychrometricCalculator:
         Returns:
             Relative humidity (%).
         """
-        # Broadcast the input arrays to the same shape
         db, hr = np.broadcast_arrays(db, hr)
-        # Calculate saturation pressure
-        ps = get_saturation_pressure(db)
-        # Calculate partial pressure of water vapor
-        pw = (
-            self.pressure
-            * hr
-            * 1e-3
-            / ((MOL_WEIGHT_WATER / MOL_WEIGHT_AIR) + hr * 1e-3)
-        )
-        # Calculate relative humidity
-        return 100 * pw / ps
+        original_shape = db.shape
 
-    @staticmethod
-    def get_db_from_hr_en(hr: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
+        result = (
+            HAPropsSI(
+                "R",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "W",
+                np.asarray(hr).flatten() / 1000,
+                "P",
+                self._pressure_pa,
+            )
+            * 100
+        )  # fraction to %
+
+        return np.atleast_1d(result).reshape(original_shape)
+
+    def get_db_from_hr_en(self, hr: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
         """
         Calculate dry bulb temperature from humidity ratio and specific air enthalpy.
 
@@ -302,10 +317,51 @@ class PsychrometricCalculator:
         Returns:
             Dry bulb temperature (degC).
         """
-        # Broadcast the input arrays to the same shape
         hr, en = np.broadcast_arrays(hr, en)
-        # Calculate dry bulb temperature
-        return (en - 2501 * hr * 1e-3) / (1.006 + 1.86 * hr * 1e-3)
+        original_shape = hr.shape
+
+        result = (
+            HAPropsSI(
+                "T",
+                "W",
+                np.asarray(hr).flatten() / 1000,
+                "H",
+                np.asarray(en).flatten() * 1000,
+                "P",
+                self._pressure_pa,
+            )
+            - 273.15
+        )  # K to degC
+
+        return np.atleast_1d(result).reshape(original_shape)
+
+    def get_db_from_rh_en(self, rh: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate dry bulb temperature from relative humidity and specific air enthalpy.
+
+        Args:
+            rh: Relative humidity (%).
+            en: Specific air enthalpy (kJ/kg).
+        Returns:
+            Dry bulb temperature (degC).
+        """
+        rh, en = np.broadcast_arrays(rh, en)
+        original_shape = rh.shape
+
+        result = (
+            HAPropsSI(
+                "T",
+                "R",
+                np.asarray(rh).flatten() / 100,
+                "H",
+                np.asarray(en).flatten() * 1000,
+                "P",
+                self._pressure_pa,
+            )
+            - 273.15
+        )  # K to degC
+
+        return np.atleast_1d(result).reshape(original_shape)
 
     def get_hr_from_db_wb(self, db: ArrayLike, wb: ArrayLike) -> NDArray[np.float64]:
         """
@@ -318,16 +374,51 @@ class PsychrometricCalculator:
         Returns:
             Humidity ratio (g/kg).
         """
-        # Broadcast the input arrays to the same shape
         db, wb = np.broadcast_arrays(db, wb)
-        # Calculate saturation pressure at wet bulb temperature
-        ps_wb = get_saturation_pressure(wb)
-        # Calculate psychrometer constant
-        c = self._psychrometer_constant(wb)
-        # Calculate partial pressure of water vapor
-        pw = ps_wb - c * self.pressure * (db - wb)
-        # Calculate humidity ratio
-        return self.get_hr_from_pw(pw)
+        original_shape = db.shape
+
+        result = (
+            HAPropsSI(
+                "W",
+                "T",
+                np.asarray(db).flatten() + 273.15,
+                "B",
+                np.asarray(wb).flatten() + 273.15,
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
+
+    def get_hr_from_rh_en(self, rh: ArrayLike, en: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate humidity ratio from relative humidity and specific air enthalpy.
+
+        Args:
+            rh: Relative humidity (%).
+            en: Specific air enthalpy (kJ/kg).
+        Returns:
+            Humidity ratio (g/kg).
+        """
+        rh, en = np.broadcast_arrays(rh, en)
+        original_shape = rh.shape
+
+        result = (
+            HAPropsSI(
+                "W",
+                "R",
+                np.asarray(rh).flatten() / 100,
+                "H",
+                np.asarray(en).flatten() * 1000,
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
+
+        return np.atleast_1d(result).reshape(original_shape)
 
     def get_hr_from_pw(self, pw: ArrayLike) -> NDArray[np.float64]:
         """
@@ -340,54 +431,22 @@ class PsychrometricCalculator:
             Humidity ratio (g/kg).
         """
         pw = np.asarray(pw)
-        return (MOL_WEIGHT_WATER / MOL_WEIGHT_AIR) * pw / (self.pressure - pw) * 1e3
+        original_shape = pw.shape
+        is_scalar = pw.ndim == 0
 
-    @staticmethod
-    def _psychrometer_constant(wb: ArrayLike) -> NDArray[np.float64]:
-        """Calculate the psychrometer constant."""
-        return np.where(np.asarray(wb) >= 0.01, 0.000662, 0.000583)
+        result = (
+            HAPropsSI(
+                "W",
+                "P_w",
+                np.atleast_1d(pw).flatten() * 1000,  # kPa to Pa
+                "T",
+                293.15,  # Reference temperature (20°C)
+                "P",
+                self._pressure_pa,
+            )
+            * 1000
+        )  # kg/kg to g/kg
 
-
-def get_saturation_pressure(temp: ArrayLike) -> NDArray[np.float64]:
-    """
-    Calculate saturation pressure (Hyland and Wexler, 1983).
-
-    Args:
-        temp: Temperature (degC).
-
-    Returns:
-        Saturation pressure (kPa)
-    """
-    temp_in_kelvine = np.asarray(temp) + 273.15
-    result = np.empty_like(temp_in_kelvine)
-
-    # Calculate for temperatures above 0.01
-    mask = temp_in_kelvine > 0.01
-    result[mask] = (
-        1e-3
-        * np.exp(
-            -(0.58002206 * 1e4) / temp_in_kelvine[mask]
-            + (0.13914993 * 1e1)
-            - (0.48640239 * 1e-1) * temp_in_kelvine[mask]
-            + (0.41764768 * 1e-4) * temp_in_kelvine[mask] ** 2
-            - (0.14452093 * 1e-7) * temp_in_kelvine[mask] ** 3
-        )
-        * temp_in_kelvine[mask] ** 6.5459673
-    )
-
-    # Calculate for temperatures below or equal to 0.01
-    mask = ~mask
-    result[mask] = (
-        1e-3
-        * np.exp(
-            -(0.56745359 * 1e4) / temp_in_kelvine[mask]
-            + (0.63925247 * 1e1)
-            - (0.96778430 * 1e-2) * temp_in_kelvine[mask]
-            + (0.62215701 * 1e-6) * temp_in_kelvine[mask] ** 2
-            + (0.20747825 * 1e-8) * temp_in_kelvine[mask] ** 3
-            - (0.94840240 * 1e-12) * temp_in_kelvine[mask] ** 4
-        )
-        * temp_in_kelvine[mask] ** 4.1635019
-    )
-
-    return result
+        if is_scalar:
+            return np.atleast_1d(result)[0]
+        return np.atleast_1d(result).reshape(original_shape)
