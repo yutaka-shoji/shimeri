@@ -37,17 +37,18 @@ class PsychrometricChart(go.Figure):
 
         # Draw iso RH lines
         _ = [
-            self.draw_iso_rh_line(rh, **bg_lines_layout) for rh in np.arange(0, 101, 10)
+            self.draw_iso_rh_line(rh, **bg_lines_layout)
+            for rh in np.arange(0.0, 101.0, 10.0)
         ]
         # Draw iso DB lines
         _ = [
             self.draw_iso_db_line(db, **bg_lines_layout)
-            for db in np.arange(-10, 71, 10)
+            for db in np.arange(-10.0, 91.0, 10.0)
         ]
         # Draw iso EN lines
         _ = [
             self.draw_iso_en_line(en, **bg_lines_layout)
-            for en in np.arange(-10, 161, 10)
+            for en in np.arange(0.0, 351.0, 10.0)
         ]
 
         # Add iso RH lines annotations
@@ -62,8 +63,8 @@ class PsychrometricChart(go.Figure):
             template="plotly_white",
         )
         self.update_xaxes(
-            title="Dry-Bulb Temperature (degC)",
-            range=self._db_to_en_at_hr0([-10, 50]),
+            title="Dry-Bulb Temperature (\u00b0C)",
+            range=self._db_to_en_at_hr0([-10.0 - 0.5, 50.0]),
             linecolor="black",
             linewidth=1.0,
             mirror=True,
@@ -71,7 +72,7 @@ class PsychrometricChart(go.Figure):
             zeroline=False,
         )
         self.update_yaxes(
-            title="Humidity Ratio (g<sub>water</sub>/kg<sub>air</sub>)",
+            title="Humidity Ratio (g<sub>water</sub>/kg<sub>DA</sub>)",
             range=[0, 30],
             linecolor="black",
             linewidth=1.0,
@@ -83,8 +84,8 @@ class PsychrometricChart(go.Figure):
 
     def add_points(
         self,
-        en: Union[NDArray[np.float64], float],
-        hr: Union[NDArray[np.float64], float],
+        en: Union[ArrayLike, float],
+        hr: Union[ArrayLike, float],
         **kwargs,
     ):
         """
@@ -109,8 +110,8 @@ class PsychrometricChart(go.Figure):
                 y=y,
                 customdata=customdata,
                 hovertemplate=(
-                    "DB: %{customdata[0]:.1f}degC<br>"
-                    + "WB: %{customdata[1]:.1f}degC<br>"
+                    "DB: %{customdata[0]:.1f}\u00b0C<br>"
+                    + "WB: %{customdata[1]:.1f}\u00b0C<br>"
                     + "RH: %{customdata[2]:.1f}%<br>"
                     + "HR: %{customdata[3]:.1f}g/kg<br>"
                     + "EN: %{customdata[4]:.1f}kJ/kg"
@@ -122,7 +123,7 @@ class PsychrometricChart(go.Figure):
     def draw_iso_rh_line(
         self,
         rh: float,
-        db_range: Union[list[float], NDArray[np.float64]] = [-10, 70],
+        db_range: Union[list[float], NDArray[np.float64]] = [-10.0, 90.0],
         **kwargs,
     ):
         """
@@ -130,7 +131,7 @@ class PsychrometricChart(go.Figure):
 
         Args:
             rh: Relative humidity (%) as a float.
-            db_range: Range of dry bulb temperatures (degC) for which to draw the line.
+            db_range: Range of dry bulb temperatures (\u00b0C) for which to draw the line.
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         dbs = np.linspace(db_range[0], db_range[-1], 100)
@@ -138,7 +139,7 @@ class PsychrometricChart(go.Figure):
         ens = self._pc.get_en_from_db_hr(dbs, hrs)
         x, y = self._skew_transform(ens, hrs)
         if "name" not in kwargs:
-            kwargs["name"] = f"RH={rh:.0f}%"
+            kwargs["name"] = f"RH={rh:.1f}%"
         self._draw_line_from_xy(x, y, **kwargs)
 
     def draw_iso_db_line(
@@ -151,7 +152,7 @@ class PsychrometricChart(go.Figure):
         Draw a line of constant dry-bulb temperature on the psychrometric chart.
 
         Args:
-            db: Dry bulb temperature (degC) as a float.
+            db: Dry bulb temperature (\u00b0C) as a float.
             rh_range: Range of relative humidities (%) for which to draw the line.
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
@@ -160,7 +161,7 @@ class PsychrometricChart(go.Figure):
         ens = self._pc.get_en_from_db_hr(db, hrs)
         x, y = self._skew_transform(ens, hrs)
         if "name" not in kwargs:
-            kwargs["name"] = f"DB={db:.0f}degC"
+            kwargs["name"] = f"DB={db:.1f}\u00b0C"
         self._draw_line_from_xy(x, y, **kwargs)
 
     def draw_iso_hr_line(
@@ -174,7 +175,7 @@ class PsychrometricChart(go.Figure):
 
         Args:
             hr: Humidity ratio (g/kg) as a float.
-            db_range: Range of dry bulb temperatures (degC) for which to draw the line.
+            db_range: Range of dry bulb temperatures (\u00b0C) for which to draw the line.
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
         dbs = np.array(db_range)
@@ -182,13 +183,13 @@ class PsychrometricChart(go.Figure):
         ens = self._pc.get_en_from_db_hr(dbs, hrs)
         x, y = self._skew_transform(ens, hrs)
         if "name" not in kwargs:
-            kwargs["name"] = f"HR={hr:.0f}g/kg"
+            kwargs["name"] = f"HR={hr:.1f}g/kg"
         self._draw_line_from_xy(x, y, **kwargs)
 
     def draw_iso_en_line(
         self,
         en: float,
-        db_range: Union[list[float], NDArray[np.float64]] = [-10, 70],
+        rh_range: Union[list[float], NDArray[np.float64]] = [0, 100],
         **kwargs,
     ):
         """
@@ -196,15 +197,15 @@ class PsychrometricChart(go.Figure):
 
         Args:
             en: Specific enthalpy (kJ/kg) as a float.
-            db_range: Range of dry bulb temperatures (degC) for which to draw the line.
+            rh_range: Range of relative humidities (%) for which to draw the line.
             **kwargs: Additional keyword arguments to be passed to plotly's go.Scatter.
         """
-        dbs = np.array(db_range)
-        hrs = self._pc.get_hr_from_db_en(dbs, en)
+        rhs = np.array([rh_range[0], rh_range[-1]], dtype=np.float64)
+        hrs = self._pc.get_hr_from_rh_en(rhs, en)
         ens = np.ones_like(hrs) * en
         x, y = self._skew_transform(ens, hrs)
         if "name" not in kwargs:
-            kwargs["name"] = f"EN={en:.0f}kJ/kg"
+            kwargs["name"] = f"EN={en:.1f}kJ/kg"
         self._draw_line_from_xy(x, y, **kwargs)
 
     def _add_iso_rh_annotation(self):
@@ -214,16 +215,18 @@ class PsychrometricChart(go.Figure):
         hrs = self._pc.get_hr_from_db_rh(db, rhs)
         ens = self._pc.get_en_from_db_hr(db, hrs)
         x, y = self._skew_transform(ens, hrs)
-        texts = np.array([f"RH={rh:.0f}%" for rh in rhs])
+        texts = np.array([f"RH={rh:.1f}%" for rh in rhs])
         self._add_annotation_from_xy(x, y, texts)
 
     def _add_iso_en_annotation(self):
         """Add annotations to the iso enthalpy lines."""
-        ens = np.array([20.0, 40.0, 60.0, 80.0, 100.0])  # kJ.kg-1
-        hrs = np.array([8.0, 13.0, 18.0, 23.0, 28.0])  # g.kg-1
+        ens = np.arange(0.0, 351.0, 20.0)
+        # calculate hr at rh=100%
+        rhs = np.ones_like(ens) * 100.0
+        hrs = self._pc.get_hr_from_rh_en(rhs, ens)
         x, y = self._skew_transform(ens, hrs)
-        texts = np.array([f"EN={en:.0f}kJ/kg<sub>air</sub>" for en in ens])
-        self._add_annotation_from_xy(x, y, texts)
+        texts = np.array([f"EN={en:.1f}kJ/kg<sub>DA</sub>" for en in ens])
+        self._add_annotation_from_xy(x, y, texts, textposition="top left")
 
     def _draw_line_from_xy(
         self,
@@ -260,6 +263,8 @@ class PsychrometricChart(go.Figure):
         """
         x, y = self._skew_transform(np.atleast_1d(en), np.atleast_1d(hr))
 
+        if "hoverinfo" not in kwargs:
+            kwargs["hoverinfo"] = "skip"
         self.add_trace(
             go.Histogram2dContour(
                 x=x,
@@ -267,6 +272,7 @@ class PsychrometricChart(go.Figure):
                 **kwargs,
             )
         )
+
         # add text annotation to the contour peak point
         if "name" in kwargs:
             name = kwargs["name"]
@@ -283,7 +289,9 @@ class PsychrometricChart(go.Figure):
                 )
             )
 
-    def _add_annotation_from_xy(self, x: NDArray, y: NDArray, text: NDArray):
+    def _add_annotation_from_xy(
+        self, x: NDArray, y: NDArray, text: NDArray, textposition: str = "top center"
+    ):
         """Add annotations to the figure."""
         self.add_trace(
             go.Scatter(
@@ -291,7 +299,7 @@ class PsychrometricChart(go.Figure):
                 y=y,
                 mode="text",
                 text=text,
-                textposition="top center",
+                textposition=textposition,
                 textfont=dict(size=8, color="#BDBDBD"),
                 showlegend=False,
                 hoverinfo="skip",
@@ -338,7 +346,7 @@ class PsychrometricChart(go.Figure):
         """
         Calculate the slope of the skew lines in the psychrometric chart.
 
-        This method uses fixed values for humidity ratio (30.0 g/kg) and dry bulb temperature (50.0 degC)
+        This method uses fixed values for humidity ratio (30.0 g/kg) and dry bulb temperature (50.0 \u00b0C)
         to calculate the slope of the skew lines in the psychrometric chart.
 
         Returns:

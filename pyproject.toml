@@ -6,6 +6,7 @@ authors = [
     { name = "Shoji, Yutaka", email = "ytk.shoji@gmail.com" }
 ]
 dependencies = [
+    "coolprop>=7.2.0",
     "numpy>=1.26",
     "plotly>=5.10",
 ]
